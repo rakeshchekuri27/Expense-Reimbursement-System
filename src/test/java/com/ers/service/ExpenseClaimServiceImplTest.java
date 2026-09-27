@@ -1,7 +1,9 @@
 package com.ers.service;
 
+import com.ers.dao.IDepartmentDao;
 import com.ers.dao.IEmployeeDao;
 import com.ers.dao.IExpenseClaimDao;
+import com.ers.model.Department;
 import com.ers.model.Employee;
 import com.ers.model.ExpenseClaim;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +25,7 @@ class ExpenseClaimServiceImplTest {
     @BeforeEach
     void setUp() {
         claimDao = new FakeExpenseClaimDao();
-        service = new ExpenseClaimServiceImpl(claimDao, new FakeEmployeeDao());
+        service = new ExpenseClaimServiceImpl(claimDao, new FakeEmployeeDao(), new FakeDepartmentDao());
     }
 
     @Test
@@ -69,8 +71,100 @@ class ExpenseClaimServiceImplTest {
         assertFalse(service.submitClaim(created.getClaimId(), 10));
     }
 
+    @Test
+    void managerSeesSubmittedClaimsFromTheirDepartment() {
+        ExpenseClaim created = service.addExpenseClaim(sampleClaim(10, 250.0));
+        service.submitClaim(created.getClaimId(), 10);
+
+        List<ExpenseClaim> waiting = service.getSubmittedClaimsForManager(11);
+
+        assertEquals(1, waiting.size());
+        assertEquals(created.getClaimId(), waiting.get(0).getClaimId());
+    }
+
+    @Test
+    void approveClaimMovesASubmittedClaimToApproved() {
+        ExpenseClaim created = service.addExpenseClaim(sampleClaim(10, 250.0));
+        service.submitClaim(created.getClaimId(), 10);
+
+        assertTrue(service.approveClaim(created.getClaimId(), 11));
+        assertEquals("APPROVED", claimDao.getExpenseClaimById(created.getClaimId()).getStatus());
+        assertTrue(service.getSubmittedClaimsForManager(11).isEmpty());
+    }
+
+    @Test
+    void approveClaimRejectsADraftAndANonManager() {
+        ExpenseClaim created = service.addExpenseClaim(sampleClaim(10, 250.0));
+
+        assertFalse(service.approveClaim(created.getClaimId(), 11));
+        service.submitClaim(created.getClaimId(), 10);
+        assertFalse(service.approveClaim(created.getClaimId(), 10));
+        assertEquals("SUBMITTED", claimDao.getExpenseClaimById(created.getClaimId()).getStatus());
+    }
+
+    @Test
+    void rejectClaimStoresTheReasonAndLeavesTheQueue() {
+        ExpenseClaim created = service.addExpenseClaim(sampleClaim(10, 250.0));
+        service.submitClaim(created.getClaimId(), 10);
+
+        assertFalse(service.rejectClaim(created.getClaimId(), 11, "  "));
+        assertTrue(service.rejectClaim(created.getClaimId(), 11, "Missing receipt"));
+        assertEquals("REJECTED", claimDao.getExpenseClaimById(created.getClaimId()).getStatus());
+        assertTrue(service.getSubmittedClaimsForManager(11).isEmpty());
+    }
+
     private ExpenseClaim sampleClaim(int employeeId, double amount) {
         return new ExpenseClaim(employeeId, "Client visit", amount, LocalDate.of(2026, 9, 26), "APPROVED", null);
+    }
+
+    private static class FakeDepartmentDao implements IDepartmentDao {
+        private final Department sales = department();
+
+        @Override
+        public Department addDepartment(Department department) {
+            return null;
+        }
+
+        @Override
+        public boolean updateDepartment(Department department) {
+            return false;
+        }
+
+        @Override
+        public Department getDepartmentById(int departmentId) {
+            return departmentId == 1 ? sales : null;
+        }
+
+        @Override
+        public List<Department> getAllDepartments() {
+            return List.of(sales);
+        }
+
+        @Override
+        public boolean deleteDepartmentById(int departmentId) {
+            return false;
+        }
+
+        @Override
+        public List<Employee> getEmployeesByDepartmentId(int departmentId) {
+            if (departmentId != 1) {
+                return List.of();
+            }
+            Employee employee = new Employee(1, "Test Employee", "test@example.com", 1);
+            employee.setEmployeeId(10);
+            return List.of(employee);
+        }
+
+        @Override
+        public Department getDepartmentByManagerId(int managerId) {
+            return managerId == 11 ? sales : null;
+        }
+
+        private Department department() {
+            Department department = new Department("Sales", 11);
+            department.setDepartmentId(1);
+            return department;
+        }
     }
 
     private static class FakeEmployeeDao implements IEmployeeDao {
@@ -151,12 +245,22 @@ class ExpenseClaimServiceImplTest {
 
         @Override
         public boolean approveClaim(int claimId) {
-            return false;
+            ExpenseClaim claim = getExpenseClaimById(claimId);
+            if (claim == null) {
+                return false;
+            }
+            claim.setStatus("APPROVED");
+            return true;
         }
 
         @Override
         public boolean rejectClaim(int claimId, String reason) {
-            return false;
+            ExpenseClaim claim = getExpenseClaimById(claimId);
+            if (claim == null || reason == null || reason.isBlank()) {
+                return false;
+            }
+            claim.setStatus("REJECTED");
+            return true;
         }
 
         @Override

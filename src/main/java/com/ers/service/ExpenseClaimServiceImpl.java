@@ -1,11 +1,16 @@
 package com.ers.service;
 
+import com.ers.dao.IDepartmentDao;
 import com.ers.dao.IEmployeeDao;
 import com.ers.dao.IExpenseClaimDao;
+import com.ers.model.Department;
+import com.ers.model.Employee;
 import com.ers.model.ExpenseClaim;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class ExpenseClaimServiceImpl implements IExpenseClaimService {
@@ -13,10 +18,12 @@ public class ExpenseClaimServiceImpl implements IExpenseClaimService {
 
     private final IExpenseClaimDao expenseClaimDao;
     private final IEmployeeDao employeeDao;
+    private final IDepartmentDao departmentDao;
 
-    public ExpenseClaimServiceImpl(IExpenseClaimDao expenseClaimDao, IEmployeeDao employeeDao) {
+    public ExpenseClaimServiceImpl(IExpenseClaimDao expenseClaimDao, IEmployeeDao employeeDao, IDepartmentDao departmentDao) {
         this.expenseClaimDao = expenseClaimDao;
         this.employeeDao = employeeDao;
+        this.departmentDao = departmentDao;
     }
 
     @Override
@@ -84,22 +91,65 @@ public class ExpenseClaimServiceImpl implements IExpenseClaimService {
             log.warn("Submit rejected: claim {} is {}", claimId, claim.getStatus());
             return false;
         }
+        Department department = departmentForEmployee(employeeId);
+        if (department == null || department.getManagerId() <= 0) {
+            log.warn("Submit rejected: employee {} has no manager", employeeId);
+            return false;
+        }
         if (!expenseClaimDao.submitClaim(claimId)) {
             log.error("Submit failed for claim {}", claimId);
             return false;
         }
-        log.info("Claim {} submitted by employee {}", claimId, employeeId);
+        log.info("Claim {} submitted by employee {} for manager {}", claimId, employeeId, department.getManagerId());
         return true;
     }
 
     @Override
-    public boolean approveClaim(int claimId) {
-        return false;
+    public List<ExpenseClaim> getSubmittedClaimsForManager(int managerId) {
+        Department department = departmentForManager(managerId);
+        if (department == null) {
+            return null;
+        }
+        List<ExpenseClaim> submitted = new ArrayList<>();
+        for (Employee employee : departmentDao.getEmployeesByDepartmentId(department.getDepartmentId())) {
+            for (ExpenseClaim claim : expenseClaimDao.getClaimsByEmployeeId(employee.getEmployeeId())) {
+                if ("SUBMITTED".equals(claim.getStatus())) {
+                    submitted.add(claim);
+                }
+            }
+        }
+        submitted.sort(Comparator.comparingInt(ExpenseClaim::getClaimId));
+        return submitted;
     }
 
     @Override
-    public boolean rejectClaim(int claimId, String reason) {
-        return false;
+    public boolean approveClaim(int claimId, int managerId) {
+        if (!canManagerReview(claimId, managerId)) {
+            return false;
+        }
+        if (!expenseClaimDao.approveClaim(claimId)) {
+            log.error("Approve failed for claim {}", claimId);
+            return false;
+        }
+        log.info("Claim {} approved by manager {}", claimId, managerId);
+        return true;
+    }
+
+    @Override
+    public boolean rejectClaim(int claimId, int managerId, String reason) {
+        if (reason == null || reason.isBlank()) {
+            log.warn("Reject rejected: claim {} needs a reason", claimId);
+            return false;
+        }
+        if (!canManagerReview(claimId, managerId)) {
+            return false;
+        }
+        if (!expenseClaimDao.rejectClaim(claimId, reason.trim())) {
+            log.error("Reject failed for claim {}", claimId);
+            return false;
+        }
+        log.info("Claim {} rejected by manager {}", claimId, managerId);
+        return true;
     }
 
     @Override
@@ -125,5 +175,47 @@ public class ExpenseClaimServiceImpl implements IExpenseClaimService {
             return false;
         }
         return true;
+    }
+
+    private boolean canManagerReview(int claimId, int managerId) {
+        Department department = departmentForManager(managerId);
+        if (department == null) {
+            return false;
+        }
+        ExpenseClaim claim = expenseClaimDao.getExpenseClaimById(claimId);
+        if (claim == null) {
+            log.warn("Review rejected: claim {} was not found", claimId);
+            return false;
+        }
+        if (!"SUBMITTED".equals(claim.getStatus())) {
+            log.warn("Review rejected: claim {} is {}", claimId, claim.getStatus());
+            return false;
+        }
+        Employee employee = employeeDao.getEmployeeById(claim.getEmployeeId());
+        if (employee == null || employee.getDepartmentId() != department.getDepartmentId()) {
+            log.warn("Review rejected: claim {} is outside manager {} department", claimId, managerId);
+            return false;
+        }
+        return true;
+    }
+
+    private Department departmentForEmployee(int employeeId) {
+        Employee employee = employeeDao.getEmployeeById(employeeId);
+        if (employee == null || employee.getDepartmentId() <= 0) {
+            return null;
+        }
+        return departmentDao.getDepartmentById(employee.getDepartmentId());
+    }
+
+    private Department departmentForManager(int managerId) {
+        if (managerId <= 0 || employeeDao.getEmployeeById(managerId) == null) {
+            log.warn("Manager action rejected: employee {} does not exist", managerId);
+            return null;
+        }
+        Department department = departmentDao.getDepartmentByManagerId(managerId);
+        if (department == null) {
+            log.warn("Manager action rejected: employee {} does not manage a department", managerId);
+        }
+        return department;
     }
 }

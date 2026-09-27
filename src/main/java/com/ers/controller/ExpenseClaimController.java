@@ -40,12 +40,16 @@ public class ExpenseClaimController {
         return expenseClaimService.submitClaim(claimId, employeeId);
     }
 
-    public boolean approveClaim(int claimId) {
-        return false;
+    public List<ExpenseClaim> getSubmittedClaimsForManager(int managerId) {
+        return expenseClaimService.getSubmittedClaimsForManager(managerId);
     }
 
-    public boolean rejectClaim(int claimId, String reason) {
-        return false;
+    public boolean approveClaim(int claimId, int managerId) {
+        return expenseClaimService.approveClaim(claimId, managerId);
+    }
+
+    public boolean rejectClaim(int claimId, int managerId, String reason) {
+        return expenseClaimService.rejectClaim(claimId, managerId, reason);
     }
 
     public List<ExpenseClaim> getClaimsByStatus(String status) {

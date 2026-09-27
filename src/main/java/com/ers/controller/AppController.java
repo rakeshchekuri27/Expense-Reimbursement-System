@@ -1,5 +1,6 @@
 package com.ers.controller;
 
+import com.ers.dao.DepartmentDaoImpl;
 import com.ers.dao.EmployeeDaoImpl;
 import com.ers.dao.ExpenseClaimDaoImpl;
 import com.ers.model.ExpenseClaim;
@@ -17,32 +18,73 @@ public class AppController {
         ExpenseClaimController claimController = new ExpenseClaimController(
                 new ExpenseClaimServiceImpl(
                         new ExpenseClaimDaoImpl(jdbcUtil),
-                        new EmployeeDaoImpl(jdbcUtil)
+                        new EmployeeDaoImpl(jdbcUtil),
+                        new DepartmentDaoImpl(jdbcUtil)
                 )
         );
 
         try (Scanner scanner = new Scanner(System.in)) {
-            System.out.println("Expense Reimbursement — Employee");
-            int employeeId = readInt(scanner, "Enter your employee id: ");
-            if (employeeId <= 0) {
-                System.out.println("Enter a valid employee id.");
-                return;
+            System.out.println("Expense Reimbursement");
+            System.out.println("1. Employee");
+            System.out.println("2. Manager");
+            System.out.println("0. Exit");
+            switch (readInt(scanner, "Choose a role: ")) {
+                case 1 -> runEmployee(scanner, claimController);
+                case 2 -> runManager(scanner, claimController);
+                case 0 -> { }
+                default -> System.out.println("Choose 1, 2, or 0.");
             }
+        }
+    }
 
-            boolean running = true;
-            while (running) {
-                System.out.println();
-                System.out.println("1. Create a draft claim");
-                System.out.println("2. View my claims");
-                System.out.println("3. Submit a draft claim for review");
-                System.out.println("0. Exit");
-                switch (readInt(scanner, "Choose an option: ")) {
-                    case 1 -> createClaim(scanner, claimController, employeeId);
-                    case 2 -> viewClaims(claimController, employeeId);
-                    case 3 -> submitClaim(scanner, claimController, employeeId);
-                    case 0 -> running = false;
-                    default -> System.out.println("Choose 1, 2, 3, or 0.");
-                }
+    private static void runEmployee(Scanner scanner, ExpenseClaimController claimController) {
+        int employeeId = readInt(scanner, "Enter your employee id: ");
+        if (employeeId <= 0) {
+            System.out.println("Enter a valid employee id.");
+            return;
+        }
+
+        boolean running = true;
+        while (running) {
+            System.out.println();
+            System.out.println("1. Create a draft claim");
+            System.out.println("2. View my claims");
+            System.out.println("3. Submit a draft claim for review");
+            System.out.println("0. Exit");
+            switch (readInt(scanner, "Choose an option: ")) {
+                case 1 -> createClaim(scanner, claimController, employeeId);
+                case 2 -> viewClaims(claimController, employeeId);
+                case 3 -> submitClaim(scanner, claimController, employeeId);
+                case 0 -> running = false;
+                default -> System.out.println("Choose 1, 2, 3, or 0.");
+            }
+        }
+    }
+
+    private static void runManager(Scanner scanner, ExpenseClaimController claimController) {
+        int managerId = readInt(scanner, "Enter your manager employee id: ");
+        if (managerId <= 0) {
+            System.out.println("Enter a valid employee id.");
+            return;
+        }
+        if (claimController.getSubmittedClaimsForManager(managerId) == null) {
+            System.out.println("This employee does not manage a department.");
+            return;
+        }
+
+        boolean running = true;
+        while (running) {
+            System.out.println();
+            System.out.println("1. View claims waiting for approval");
+            System.out.println("2. Approve a claim");
+            System.out.println("3. Reject a claim");
+            System.out.println("0. Exit");
+            switch (readInt(scanner, "Choose an option: ")) {
+                case 1 -> viewSubmittedClaims(claimController, managerId);
+                case 2 -> approveClaim(scanner, claimController, managerId);
+                case 3 -> rejectClaim(scanner, claimController, managerId);
+                case 0 -> running = false;
+                default -> System.out.println("Choose 1, 2, 3, or 0.");
             }
         }
     }
@@ -128,9 +170,73 @@ public class AppController {
 
     private static void printSubmitResult(boolean submitted) {
         if (submitted) {
-            System.out.println("Claim submitted for review.");
+            System.out.println("Claim submitted to your manager for review.");
         } else {
-            System.out.println("Claim was not submitted. Only your own draft claims can be sent for review.");
+            System.out.println("Claim was not submitted. Only your own draft can be sent, and your department must have a manager.");
+        }
+    }
+
+    private static void viewSubmittedClaims(ExpenseClaimController claimController, int managerId) {
+        List<ExpenseClaim> claims = claimController.getSubmittedClaimsForManager(managerId);
+        if (claims == null) {
+            System.out.println("This employee does not manage a department.");
+            return;
+        }
+        if (claims.isEmpty()) {
+            System.out.println("No claims are waiting for your approval.");
+            return;
+        }
+        for (ExpenseClaim claim : claims) {
+            System.out.printf(
+                    "Claim %d | employee %d | %s | %.2f | %s%n",
+                    claim.getClaimId(),
+                    claim.getEmployeeId(),
+                    claim.getClaimDate(),
+                    claim.getClaimAmount(),
+                    claim.getClaimDesc()
+            );
+        }
+    }
+
+    private static void approveClaim(Scanner scanner, ExpenseClaimController claimController, int managerId) {
+        viewSubmittedClaims(claimController, managerId);
+        List<ExpenseClaim> claims = claimController.getSubmittedClaimsForManager(managerId);
+        if (claims == null || claims.isEmpty()) {
+            return;
+        }
+        int claimId = readInt(scanner, "Claim id to approve: ");
+        if (claimId <= 0) {
+            System.out.println("Enter a valid claim id.");
+            return;
+        }
+        if (claimController.approveClaim(claimId, managerId)) {
+            System.out.println("Claim approved.");
+        } else {
+            System.out.println("Claim was not approved. Only a submitted claim from your department can be approved.");
+        }
+    }
+
+    private static void rejectClaim(Scanner scanner, ExpenseClaimController claimController, int managerId) {
+        viewSubmittedClaims(claimController, managerId);
+        List<ExpenseClaim> claims = claimController.getSubmittedClaimsForManager(managerId);
+        if (claims == null || claims.isEmpty()) {
+            return;
+        }
+        int claimId = readInt(scanner, "Claim id to reject: ");
+        if (claimId <= 0) {
+            System.out.println("Enter a valid claim id.");
+            return;
+        }
+        System.out.print("Reason: ");
+        String reason = scanner.nextLine().trim();
+        if (reason.isBlank()) {
+            System.out.println("Enter a reason.");
+            return;
+        }
+        if (claimController.rejectClaim(claimId, managerId, reason)) {
+            System.out.println("Claim rejected.");
+        } else {
+            System.out.println("Claim was not rejected. Only a submitted claim from your department can be rejected.");
         }
     }
 
