@@ -4,6 +4,8 @@ import com.ers.model.ExpenseClaim;
 import com.ers.model.FinanceExecutive;
 import com.ers.model.Reimbursement;
 import com.ers.util.JDBCUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -15,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FinanceExecutiveDaoImpl implements IFinanceExecutiveDao {
+    private static final Logger log = LoggerFactory.getLogger(FinanceExecutiveDaoImpl.class);
     private final JDBCUtil jdbcUtil;
 
     public FinanceExecutiveDaoImpl(JDBCUtil jdbcUtil) {
@@ -33,7 +36,7 @@ public class FinanceExecutiveDaoImpl implements IFinanceExecutiveDao {
             ps.executeUpdate();
             return financeExecutive;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to insert finance executive {}", financeExecutive.getEmployeeId(), e);
             return null;
         }
     }
@@ -49,7 +52,7 @@ public class FinanceExecutiveDaoImpl implements IFinanceExecutiveDao {
             ps.setInt(4, financeExecutive.getEmployeeId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to update finance executive {}", financeExecutive.getEmployeeId(), e);
             return false;
         }
     }
@@ -66,7 +69,7 @@ public class FinanceExecutiveDaoImpl implements IFinanceExecutiveDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to load finance executive {}", employeeId, e);
         }
         return null;
     }
@@ -82,7 +85,7 @@ public class FinanceExecutiveDaoImpl implements IFinanceExecutiveDao {
                 executives.add(mapFinance(rs));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list finance executives", e);
         }
         return executives;
     }
@@ -95,7 +98,7 @@ public class FinanceExecutiveDaoImpl implements IFinanceExecutiveDao {
             ps.setInt(1, employeeId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to delete finance executive {}", employeeId, e);
             return false;
         }
     }
@@ -111,7 +114,7 @@ public class FinanceExecutiveDaoImpl implements IFinanceExecutiveDao {
                 claims.add(mapClaim(rs));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list approved claims awaiting payment", e);
         }
         return claims;
     }
@@ -128,7 +131,7 @@ public class FinanceExecutiveDaoImpl implements IFinanceExecutiveDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to load claim {} for payment", claimId, e);
         }
         return null;
     }
@@ -148,6 +151,7 @@ public class FinanceExecutiveDaoImpl implements IFinanceExecutiveDao {
                 ps.setInt(1, claimId);
                 try (ResultSet rs = ps.executeQuery()) {
                     if (!rs.next()) {
+                        log.warn("Payment skipped: claim {} was not found", claimId);
                         con.rollback();
                         return false;
                     }
@@ -176,17 +180,17 @@ public class FinanceExecutiveDaoImpl implements IFinanceExecutiveDao {
                 try {
                     con.rollback();
                 } catch (SQLException ex) {
-                    ex.printStackTrace();
+                    log.error("Failed to roll back payment for claim {}", claimId, ex);
                 }
             }
-            e.printStackTrace();
+            log.error("Failed to process payment for claim {}", claimId, e);
             return false;
         } finally {
             if (con != null) {
                 try {
                     con.close();
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    log.error("Failed to close payment connection for claim {}", claimId, e);
                 }
             }
         }
@@ -205,7 +209,7 @@ public class FinanceExecutiveDaoImpl implements IFinanceExecutiveDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list reimbursements processed by {}", financeExecutiveId, e);
         }
         return history;
     }

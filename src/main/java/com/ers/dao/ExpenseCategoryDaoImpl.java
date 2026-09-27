@@ -2,6 +2,8 @@ package com.ers.dao;
 
 import com.ers.model.ExpenseCategory;
 import com.ers.util.JDBCUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -12,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ExpenseCategoryDaoImpl implements IExpenseCategoryDao {
+    private static final Logger log = LoggerFactory.getLogger(ExpenseCategoryDaoImpl.class);
     private final JDBCUtil jdbcUtil;
 
     public ExpenseCategoryDaoImpl(JDBCUtil jdbcUtil) {
@@ -33,7 +36,7 @@ public class ExpenseCategoryDaoImpl implements IExpenseCategoryDao {
             }
             return expenseCategory;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to insert expense category {}", expenseCategory.getCategory_name(), e);
             return null;
         }
     }
@@ -48,7 +51,7 @@ public class ExpenseCategoryDaoImpl implements IExpenseCategoryDao {
             ps.setInt(3, expenseCategory.getCategory_id());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to update expense category {}", expenseCategory.getCategory_id(), e);
             return false;
         }
     }
@@ -65,7 +68,7 @@ public class ExpenseCategoryDaoImpl implements IExpenseCategoryDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to load expense category {}", categoryId, e);
         }
         return null;
     }
@@ -81,7 +84,7 @@ public class ExpenseCategoryDaoImpl implements IExpenseCategoryDao {
                 categories.add(mapCategory(rs));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list expense categories", e);
         }
         return categories;
     }
@@ -94,7 +97,7 @@ public class ExpenseCategoryDaoImpl implements IExpenseCategoryDao {
             ps.setInt(1, categoryId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to delete expense category {}", categoryId, e);
             return false;
         }
     }

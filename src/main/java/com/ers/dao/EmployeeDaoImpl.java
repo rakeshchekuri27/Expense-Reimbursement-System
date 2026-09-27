@@ -2,6 +2,8 @@ package com.ers.dao;
 
 import com.ers.model.Employee;
 import com.ers.util.JDBCUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -13,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class EmployeeDaoImpl implements IEmployeeDao {
+    private static final Logger log = LoggerFactory.getLogger(EmployeeDaoImpl.class);
     private final JDBCUtil jdbcUtil;
 
     public EmployeeDaoImpl(JDBCUtil jdbcUtil) {
@@ -36,7 +39,7 @@ public class EmployeeDaoImpl implements IEmployeeDao {
             }
             return employee;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to insert employee for user {}", employee.getUserId(), e);
             return null;
         }
     }
@@ -53,7 +56,7 @@ public class EmployeeDaoImpl implements IEmployeeDao {
             ps.setInt(5, employee.getEmployeeId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to update employee {}", employee.getEmployeeId(), e);
             return false;
         }
     }
@@ -70,7 +73,7 @@ public class EmployeeDaoImpl implements IEmployeeDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to load employee {}", employeeId, e);
         }
         return null;
     }
@@ -86,7 +89,7 @@ public class EmployeeDaoImpl implements IEmployeeDao {
                 employees.add(mapEmployee(rs));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list employees", e);
         }
         return employees;
     }
@@ -99,7 +102,7 @@ public class EmployeeDaoImpl implements IEmployeeDao {
             ps.setInt(1, employeeId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to delete employee {}", employeeId, e);
             return false;
         }
     }

@@ -3,6 +3,8 @@ package com.ers.dao;
 import com.ers.model.Department;
 import com.ers.model.Employee;
 import com.ers.util.JDBCUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -14,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DepartmentDaoImpl implements IDepartmentDao {
+    private static final Logger log = LoggerFactory.getLogger(DepartmentDaoImpl.class);
     private final JDBCUtil jdbcUtil;
 
     public DepartmentDaoImpl(JDBCUtil jdbcUtil) {
@@ -35,7 +38,7 @@ public class DepartmentDaoImpl implements IDepartmentDao {
             }
             return department;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to insert department {}", department.getDepartmentName(), e);
             return null;
         }
     }
@@ -50,7 +53,7 @@ public class DepartmentDaoImpl implements IDepartmentDao {
             ps.setInt(3, department.getDepartmentId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to update department {}", department.getDepartmentId(), e);
             return false;
         }
     }
@@ -67,7 +70,7 @@ public class DepartmentDaoImpl implements IDepartmentDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to load department {}", departmentId, e);
         }
         return null;
     }
@@ -83,7 +86,7 @@ public class DepartmentDaoImpl implements IDepartmentDao {
                 departments.add(mapDepartment(rs));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list departments", e);
         }
         return departments;
     }
@@ -96,7 +99,7 @@ public class DepartmentDaoImpl implements IDepartmentDao {
             ps.setInt(1, departmentId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to delete department {}", departmentId, e);
             return false;
         }
     }
@@ -114,7 +117,7 @@ public class DepartmentDaoImpl implements IDepartmentDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list employees for department {}", departmentId, e);
         }
         return employees;
     }
@@ -131,7 +134,7 @@ public class DepartmentDaoImpl implements IDepartmentDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to load department for manager {}", managerId, e);
         }
         return null;
     }

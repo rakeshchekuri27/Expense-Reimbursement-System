@@ -2,6 +2,8 @@ package com.ers.dao;
 
 import com.ers.model.User;
 import com.ers.util.JDBCUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -14,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserDaoImpl implements IUserDao {
+    private static final Logger log = LoggerFactory.getLogger(UserDaoImpl.class);
     private final JDBCUtil jdbcUtil;
 
     public UserDaoImpl(JDBCUtil jdbcUtil) {
@@ -37,7 +40,7 @@ public class UserDaoImpl implements IUserDao {
             }
             return user;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to insert user {}", user.getUserName(), e);
             return null;
         }
     }
@@ -54,7 +57,7 @@ public class UserDaoImpl implements IUserDao {
             ps.setInt(5, user.getUserId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to update user {}", user.getUserId(), e);
             return false;
         }
     }
@@ -71,7 +74,7 @@ public class UserDaoImpl implements IUserDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to load user {}", userId, e);
         }
         return null;
     }
@@ -87,7 +90,7 @@ public class UserDaoImpl implements IUserDao {
                 users.add(mapUser(rs));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list users", e);
         }
         return users;
     }
@@ -100,7 +103,7 @@ public class UserDaoImpl implements IUserDao {
             ps.setInt(1, userId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to delete user {}", userId, e);
             return false;
         }
     }
@@ -117,7 +120,7 @@ public class UserDaoImpl implements IUserDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to load user {}", username, e);
         }
         return null;
     }
@@ -131,7 +134,7 @@ public class UserDaoImpl implements IUserDao {
             ps.setInt(2, userId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to update active status for user {}", userId, e);
             return false;
         }
     }

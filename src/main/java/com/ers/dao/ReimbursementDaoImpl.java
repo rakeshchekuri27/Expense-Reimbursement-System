@@ -2,6 +2,8 @@ package com.ers.dao;
 
 import com.ers.model.Reimbursement;
 import com.ers.util.JDBCUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -13,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ReimbursementDaoImpl implements IReimbursementDao {
+    private static final Logger log = LoggerFactory.getLogger(ReimbursementDaoImpl.class);
     private final JDBCUtil jdbcUtil;
 
     public ReimbursementDaoImpl(JDBCUtil jdbcUtil) {
@@ -33,7 +36,7 @@ public class ReimbursementDaoImpl implements IReimbursementDao {
             }
             return reimbursement;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to insert reimbursement for claim {}", reimbursement.getClaimId(), e);
             return null;
         }
     }
@@ -47,7 +50,7 @@ public class ReimbursementDaoImpl implements IReimbursementDao {
             ps.setInt(8, reimbursement.getReimbursementId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to update reimbursement {}", reimbursement.getReimbursementId(), e);
             return false;
         }
     }
@@ -64,7 +67,7 @@ public class ReimbursementDaoImpl implements IReimbursementDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to load reimbursement {}", reimbursementId, e);
         }
         return null;
     }
@@ -80,7 +83,7 @@ public class ReimbursementDaoImpl implements IReimbursementDao {
                 reimbursements.add(mapReimbursement(rs));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list reimbursements", e);
         }
         return reimbursements;
     }
@@ -93,7 +96,7 @@ public class ReimbursementDaoImpl implements IReimbursementDao {
             ps.setInt(1, reimbursementId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to delete reimbursement {}", reimbursementId, e);
             return false;
         }
     }
@@ -110,7 +113,7 @@ public class ReimbursementDaoImpl implements IReimbursementDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to load reimbursement for claim {}", claimId, e);
         }
         return null;
     }
@@ -128,7 +131,7 @@ public class ReimbursementDaoImpl implements IReimbursementDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list reimbursements for employee {}", employeeId, e);
         }
         return reimbursements;
     }
@@ -146,7 +149,7 @@ public class ReimbursementDaoImpl implements IReimbursementDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list reimbursements with status {}", status, e);
         }
         return reimbursements;
     }

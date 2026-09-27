@@ -11,7 +11,7 @@ public interface IExpenseClaimService {
     List<ExpenseClaim> getAllExpenseClaims();
     boolean deleteExpenseClaimById(int claimId);
     List<ExpenseClaim> getClaimsByEmployeeId(int employeeId);
-    boolean submitClaim(int claimId);
+    boolean submitClaim(int claimId, int employeeId);
     boolean approveClaim(int claimId);
     boolean rejectClaim(int claimId, String reason);
     List<ExpenseClaim> getClaimsByStatus(String status);

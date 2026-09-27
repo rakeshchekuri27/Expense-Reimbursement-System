@@ -2,6 +2,8 @@ package com.ers.dao;
 
 import com.ers.model.ExpenseClaim;
 import com.ers.util.JDBCUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -13,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ExpenseClaimDaoImpl implements IExpenseClaimDao {
+    private static final Logger log = LoggerFactory.getLogger(ExpenseClaimDaoImpl.class);
     private final JDBCUtil jdbcUtil;
 
     public ExpenseClaimDaoImpl(JDBCUtil jdbcUtil) {
@@ -38,7 +41,7 @@ public class ExpenseClaimDaoImpl implements IExpenseClaimDao {
             }
             return expenseClaim;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to insert expense claim for employee {}", expenseClaim.getEmployeeId(), e);
             return null;
         }
     }
@@ -57,7 +60,7 @@ public class ExpenseClaimDaoImpl implements IExpenseClaimDao {
             ps.setInt(7, expenseClaim.getClaimId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to update expense claim {}", expenseClaim.getClaimId(), e);
             return false;
         }
     }
@@ -74,7 +77,7 @@ public class ExpenseClaimDaoImpl implements IExpenseClaimDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to load expense claim {}", claimId, e);
         }
         return null;
     }
@@ -92,7 +95,7 @@ public class ExpenseClaimDaoImpl implements IExpenseClaimDao {
             ps.setInt(1, claimId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to delete expense claim {}", claimId, e);
             return false;
         }
     }
@@ -130,7 +133,7 @@ public class ExpenseClaimDaoImpl implements IExpenseClaimDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list expense claims with status {}", status, e);
         }
         return claims;
     }
@@ -148,7 +151,7 @@ public class ExpenseClaimDaoImpl implements IExpenseClaimDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list expense claims", e);
         }
         return claims;
     }
@@ -168,7 +171,7 @@ public class ExpenseClaimDaoImpl implements IExpenseClaimDao {
             }
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to set expense claim {} to status {}", claimId, status, e);
             return false;
         }
     }

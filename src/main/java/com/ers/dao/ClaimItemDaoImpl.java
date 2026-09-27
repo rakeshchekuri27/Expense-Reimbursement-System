@@ -2,6 +2,8 @@ package com.ers.dao;
 
 import com.ers.model.ClaimItem;
 import com.ers.util.JDBCUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -13,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ClaimItemDaoImpl implements IClaimItemDao {
+    private static final Logger log = LoggerFactory.getLogger(ClaimItemDaoImpl.class);
     private final JDBCUtil jdbcUtil;
 
     public ClaimItemDaoImpl(JDBCUtil jdbcUtil) {
@@ -37,7 +40,7 @@ public class ClaimItemDaoImpl implements IClaimItemDao {
             }
             return claimItem;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to insert claim item for claim {}", claimItem.getClaimId(), e);
             return null;
         }
     }
@@ -55,7 +58,7 @@ public class ClaimItemDaoImpl implements IClaimItemDao {
             ps.setInt(6, claimItem.getItemId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to update claim item {}", claimItem.getItemId(), e);
             return false;
         }
     }
@@ -72,7 +75,7 @@ public class ClaimItemDaoImpl implements IClaimItemDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to load claim item {}", itemId, e);
         }
         return null;
     }
@@ -88,7 +91,7 @@ public class ClaimItemDaoImpl implements IClaimItemDao {
                 items.add(mapItem(rs));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list claim items", e);
         }
         return items;
     }
@@ -101,7 +104,7 @@ public class ClaimItemDaoImpl implements IClaimItemDao {
             ps.setInt(1, itemId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to delete claim item {}", itemId, e);
             return false;
         }
     }
@@ -119,7 +122,7 @@ public class ClaimItemDaoImpl implements IClaimItemDao {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("Failed to list items for claim {}", claimId, e);
         }
         return items;
     }
