@@ -21,7 +21,7 @@ public class FinanceExecutiveController {
         return false;
     }
     public FinanceExecutive getFinanceExecutiveById(int employeeId) {
-        return null;
+        return financeExecutiveService.getFinanceExecutiveById(employeeId);
     }
     public List<FinanceExecutive> getAllFinanceExecutives() {
         return List.of();
@@ -30,15 +30,15 @@ public class FinanceExecutiveController {
         return false;
     }
     public List<ExpenseClaim> getPendingClaims() {
-        return List.of();
+        return financeExecutiveService.getPendingClaims();
     }
 
     public ExpenseClaim getClaimById(int claimId) {
         return null;
     }
 
-    public boolean processPayment(int claimId, int financeExecutiveId, String paymentMode){
-        return false;
+    public boolean processPayment(int claimId, int financeExecutiveId, String paymentMode) {
+        return financeExecutiveService.processPayment(claimId, financeExecutiveId, paymentMode);
     }
 
     public List<Reimbursement> getReimbursementHistory(int financeExecutiveId) {

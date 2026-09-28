@@ -3,8 +3,10 @@ package com.ers.controller;
 import com.ers.dao.DepartmentDaoImpl;
 import com.ers.dao.EmployeeDaoImpl;
 import com.ers.dao.ExpenseClaimDaoImpl;
+import com.ers.dao.FinanceExecutiveDaoImpl;
 import com.ers.model.ExpenseClaim;
 import com.ers.service.ExpenseClaimServiceImpl;
+import com.ers.service.FinanceExecutiveServiceImpl;
 import com.ers.util.JDBCUtil;
 
 import java.time.LocalDate;
@@ -23,16 +25,22 @@ public class AppController {
                 )
         );
 
+        FinanceExecutiveController financeController = new FinanceExecutiveController(
+                new FinanceExecutiveServiceImpl(new FinanceExecutiveDaoImpl(jdbcUtil))
+        );
+
         try (Scanner scanner = new Scanner(System.in)) {
             System.out.println("Expense Reimbursement");
             System.out.println("1. Employee");
             System.out.println("2. Manager");
+            System.out.println("3. Finance");
             System.out.println("0. Exit");
             switch (readInt(scanner, "Choose a role: ")) {
                 case 1 -> runEmployee(scanner, claimController);
                 case 2 -> runManager(scanner, claimController);
+                case 3 -> runFinance(scanner, financeController);
                 case 0 -> { }
-                default -> System.out.println("Choose 1, 2, or 0.");
+                default -> System.out.println("Choose 1, 2, 3, or 0.");
             }
         }
     }
@@ -85,6 +93,32 @@ public class AppController {
                 case 3 -> rejectClaim(scanner, claimController, managerId);
                 case 0 -> running = false;
                 default -> System.out.println("Choose 1, 2, 3, or 0.");
+            }
+        }
+    }
+
+    private static void runFinance(Scanner scanner, FinanceExecutiveController financeController) {
+        int financeExecutiveId = readInt(scanner, "Enter your finance executive id: ");
+        if (financeExecutiveId <= 0) {
+            System.out.println("Enter a valid employee id.");
+            return;
+        }
+        if (financeController.getFinanceExecutiveById(financeExecutiveId) == null) {
+            System.out.println("This employee is not a finance executive.");
+            return;
+        }
+
+        boolean running = true;
+        while (running) {
+            System.out.println();
+            System.out.println("1. View approved claims");
+            System.out.println("2. Pay a claim");
+            System.out.println("0. Exit");
+            switch (readInt(scanner, "Choose an option: ")) {
+                case 1 -> viewApprovedClaims(financeController);
+                case 2 -> payClaim(scanner, financeController, financeExecutiveId);
+                case 0 -> running = false;
+                default -> System.out.println("Choose 1, 2, or 0.");
             }
         }
     }
@@ -237,6 +271,57 @@ public class AppController {
             System.out.println("Claim rejected.");
         } else {
             System.out.println("Claim was not rejected. Only a submitted claim from your department can be rejected.");
+        }
+    }
+
+    private static void viewApprovedClaims(FinanceExecutiveController financeController) {
+        List<ExpenseClaim> claims = financeController.getPendingClaims();
+        if (claims == null || claims.isEmpty()) {
+            System.out.println("No approved claims are waiting for payment.");
+            return;
+        }
+        for (ExpenseClaim claim : claims) {
+            System.out.printf(
+                    "Claim %d | employee %d | %s | %.2f | %s%n",
+                    claim.getClaimId(),
+                    claim.getEmployeeId(),
+                    claim.getClaimDate(),
+                    claim.getClaimAmount(),
+                    claim.getClaimDesc()
+            );
+        }
+    }
+
+    private static void payClaim(Scanner scanner, FinanceExecutiveController financeController, int financeExecutiveId) {
+        viewApprovedClaims(financeController);
+        List<ExpenseClaim> claims = financeController.getPendingClaims();
+        if (claims == null || claims.isEmpty()) {
+            return;
+        }
+        int claimId = readInt(scanner, "Claim id to pay: ");
+        if (claimId <= 0) {
+            System.out.println("Enter a valid claim id.");
+            return;
+        }
+        System.out.println("1. BANK_TRANSFER");
+        System.out.println("2. CASH");
+        System.out.println("3. UPI");
+        System.out.println("4. CHEQUE");
+        String paymentMode = switch (readInt(scanner, "Payment mode: ")) {
+            case 1 -> "BANK_TRANSFER";
+            case 2 -> "CASH";
+            case 3 -> "UPI";
+            case 4 -> "CHEQUE";
+            default -> null;
+        };
+        if (paymentMode == null) {
+            System.out.println("Choose a payment mode from 1 to 4.");
+            return;
+        }
+        if (financeController.processPayment(claimId, financeExecutiveId, paymentMode)) {
+            System.out.println("Claim reimbursed.");
+        } else {
+            System.out.println("Payment was not recorded. Only an approved claim can be paid.");
         }
     }
 
